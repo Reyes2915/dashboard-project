@@ -1,0 +1,48 @@
+// Design tokens. Theme-independent scales live here; colour roles live in _themes.scss.
+
+$breakpoint-md: 48rem;
+$breakpoint-lg: 72rem;
+
+:root {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.625rem;
+  --text-2xl: 2rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  // WCAG 2.2 SC 2.5.8: interactive targets are at least 24x24 CSS px (we use 40px for primary controls).
+  --target-min: 24px;
+  --control-height: 2.5rem;
+
+  --shadow-1: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 10%);
+  --shadow-2: 0 8px 24px rgb(16 24 40 / 16%);
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+
+  --shell-max: 90rem;
+  --drawer-width: min(28rem, 100vw);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}

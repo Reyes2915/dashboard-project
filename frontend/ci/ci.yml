@@ -1,0 +1,113 @@
+# Copy to <repo-root>/.github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['frontend/**', '.github/workflows/ci.yml']
+  pull_request:
+    paths: ['frontend/**', '.github/workflows/ci.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  quality:
+    name: Lint · Unit · E2E · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install (lockfile only)
+        run: npm ci
+
+      - name: Supply-chain audit · runtime dependencies (blocking)
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Supply-chain audit · full tree (report)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Forbid raw HTML sinks and sanitizer bypasses
+        run: npm run security:sinks
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Type check (app, specs, e2e)
+        run: npm run typecheck
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Unit & integration tests (headless Chromium)
+        run: npm test -- --watch=false --browsers=ChromiumHeadless
+
+      - name: E2E tests
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7
+
+      - name: Production build
+        run: npm run build
+
+      - name: Assert no source maps shipped
+        run: test -z "$(find dist -name '*.map')"
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: quality
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: false
+          load: true
+          tags: finops-dashboard:ci
+      - name: Smoke test security headers
+        working-directory: .
+        run: |
+          docker run -d --rm -p 8080:8080 --name finops finops-dashboard:ci
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8080/ >/dev/null && break; sleep 1; done
+          headers="$(curl -sI http://127.0.0.1:8080/dashboard)"
+          echo "$headers"
+          echo "$headers" | grep -qi '^content-security-policy:.*frame-ancestors .none.'
+          echo "$headers" | grep -qi '^x-frame-options: DENY'
+          echo "$headers" | grep -qi '^x-content-type-options: nosniff'
+          echo "$headers" | grep -qi '^strict-transport-security:'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8080/)" = "405"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/expenses)" = "200"
+          docker stop finops

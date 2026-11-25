@@ -1,0 +1,56 @@
+{
+  "name": "finops-dashboard",
+  "version": "1.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "test:ci": "ng test --watch=false",
+    "lint": "ng lint",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit && tsc -p e2e/tsconfig.json --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
+    "audit:prod": "npm audit --audit-level=high --omit=dev",
+    "security:sinks": "! grep -rnE \"innerHTML|outerHTML|bypassSecurityTrust|eval\\\\(\" src/app",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:report": "playwright show-report",
+    "test:browser": "ng test --watch=false --browsers=ChromiumHeadless"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^22.2.0",
+    "@angular/compiler": "^22.2.0",
+    "@angular/core": "^22.2.0",
+    "@angular/forms": "^22.2.0",
+    "@angular/platform-browser": "^22.2.0",
+    "@angular/router": "^22.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.7",
+    "@angular/cli": "^22.2.7",
+    "@angular/compiler-cli": "^22.2.0",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.65.1",
+    "@types/node": "22.20.5",
+    "@vitest/browser-playwright": "5.1.0",
+    "angular-eslint": "22.7.0",
+    "eslint": "^10.14.0",
+    "jsdom": "^30.0.0",
+    "playwright": "1.65.1",
+    "prettier": "^3.8.1",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.0.0"
+  },
+  "description": "FinOps Enterprise Dashboard - Angular 22 zoneless SPA hardened against OWASP Top 10 Web & API.",
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10"
+  },
+  "packageManager": "npm@10.9.9"
+}

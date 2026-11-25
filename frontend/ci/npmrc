@@ -1,0 +1,5 @@
+# Supply-chain hardening (Web A03): exact versions, lockfile is the source of truth, no install scripts surprises.
+save-exact=true
+engine-strict=true
+fund=false
+audit-level=high

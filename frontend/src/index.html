@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>FinOps Enterprise</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="FinOps Enterprise Dashboard: budget control, spend analytics and invoice approval."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#1d5bb8" />
+    <!-- Security meta tags. Transport headers (CSP, HSTS, X-Frame-Options...) are set by nginx. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta http-equiv="X-DNS-Prefetch-Control" content="off" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  </head>
+  <body>
+    <!-- nginx replaces the nonce placeholder per request so Angular's runtime <style> tags satisfy the CSP. -->
+    <app-root ngCspNonce="__CSP_NONCE__"></app-root>
+    <noscript>This application requires JavaScript.</noscript>
+  </body>
+</html>

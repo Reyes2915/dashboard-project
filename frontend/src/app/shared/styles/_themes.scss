@@ -1,0 +1,97 @@
+// Colour roles. Every text/background pair below meets WCAG 2.2 AA (>= 4.5:1 for text, >= 3:1 for UI).
+
+@mixin light-theme {
+  color-scheme: light;
+  --color-bg: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef0f4;
+  --color-text: #141821; // 17.6:1 on surface
+  --color-text-secondary: #474f60; // 8.3:1 on surface
+  --color-text-muted: #5b6375; // 6.2:1 on surface
+  --color-border: #c9ced8;
+  --color-border-strong: #7a8294; // 3.9:1 (UI component boundary)
+  --color-primary: #1d5bb8; // 6.4:1 with white text
+  --color-primary-hover: #174a96;
+  --color-on-primary: #ffffff;
+  --color-focus: #1d5bb8;
+  --color-success: #1b6e37; // 6.2:1
+  --color-success-bg: #e6f4ea;
+  --color-warning: #7a4f00; // 7.0:1
+  --color-warning-bg: #fff4dc;
+  --color-danger: #b0261b; // 6.3:1
+  --color-danger-bg: #fdecea;
+  --color-info: #1d5bb8;
+  --color-info-bg: #e8f0fc;
+  --color-overlay: rgb(10 14 22 / 55%);
+
+  // Data-viz roles (validated categorical order; text never wears these colours).
+  --viz-track: #e3e6ec;
+  --viz-series-1: #2a78d6;
+  --viz-series-2: #eb6834;
+  --viz-series-3: #1baf7a;
+  --viz-series-4: #eda100;
+  --viz-series-5: #e87ba4;
+  --viz-series-6: #008300;
+  --viz-series-7: #6250d6;
+  --viz-series-8: #e34948;
+  --viz-gap: var(--color-surface);
+}
+
+@mixin high-contrast-theme {
+  color-scheme: dark;
+  --color-bg: #000000;
+  --color-surface: #000000;
+  --color-surface-2: #121212;
+  --color-text: #ffffff;
+  --color-text-secondary: #f2f2f2;
+  --color-text-muted: #e0e0e0;
+  --color-border: #ffffff;
+  --color-border-strong: #ffffff;
+  --color-primary: #ffd60a;
+  --color-primary-hover: #ffe55c;
+  --color-on-primary: #000000;
+  --color-focus: #00e5ff;
+  --color-success: #6dff9c;
+  --color-success-bg: #000000;
+  --color-warning: #ffd60a;
+  --color-warning-bg: #000000;
+  --color-danger: #ff9b91;
+  --color-danger-bg: #000000;
+  --color-info: #8cc8ff;
+  --color-info-bg: #000000;
+  --color-overlay: rgb(0 0 0 / 80%);
+
+  --viz-track: #3a3a3a;
+  --viz-series-1: #5aa9ff;
+  --viz-series-2: #ff8c5a;
+  --viz-series-3: #2ee6a6;
+  --viz-series-4: #ffd60a;
+  --viz-series-5: #ff9cc6;
+  --viz-series-6: #6dff6d;
+  --viz-series-7: #b3a8ff;
+  --viz-series-8: #ff7b7b;
+  --viz-gap: #000000;
+  --shadow-1: none;
+  --shadow-2: 0 0 0 2px #ffffff;
+}
+
+:root {
+  @include light-theme;
+}
+
+// Explicit user choice wins; otherwise honour the OS "increase contrast" preference.
+:root[data-theme='high-contrast'] {
+  @include high-contrast-theme;
+}
+
+@media (prefers-contrast: more) {
+  :root:not([data-theme='light']) {
+    @include high-contrast-theme;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --color-focus: Highlight;
+  }
+}

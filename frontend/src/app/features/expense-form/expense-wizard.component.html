@@ -1,0 +1,267 @@
+<section class="page wizard" aria-labelledby="wizard-title">
+  <header class="page-header">
+    <div>
+      <h1 id="wizard-title">Submit a new expense</h1>
+      <p>Three short steps. Fields marked with * are required.</p>
+    </div>
+    <a class="btn" routerLink="/expenses">Cancel</a>
+  </header>
+
+  <nav aria-label="Form progress">
+    <ol class="stepper">
+      @for (s of steps; track s; let i = $index) {
+        <li class="stepper__item" [class.is-current]="step() === i" [class.is-done]="step() > i">
+          <button
+            type="button"
+            class="stepper__btn"
+            [attr.aria-current]="step() === i ? 'step' : null"
+            [disabled]="i > step()"
+            (click)="goTo(i)"
+          >
+            <span class="stepper__index" aria-hidden="true">{{ step() > i ? '✓' : i + 1 }}</span>
+            <span>{{ s }}</span>
+            @if (step() > i) {
+              <span class="visually-hidden">(completed)</span>
+            }
+          </button>
+        </li>
+      }
+    </ol>
+  </nav>
+
+  <form class="card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <h2 #stepHeading tabindex="-1" class="step-title">
+      Step {{ step() + 1 }} of {{ steps.length }}: {{ steps[step()] }}
+    </h2>
+
+    @switch (step()) {
+      @case (0) {
+        <fieldset class="grid" formGroupName="details">
+          <legend class="visually-hidden">Invoice details</legend>
+
+          @let title = form.controls.details.controls.title;
+          <div class="field span-2">
+            <label for="field-title">Title *</label>
+            <input
+              id="field-title"
+              class="input"
+              formControlName="title"
+              maxlength="80"
+              autocomplete="off"
+              [attr.aria-invalid]="!!errorFor(title, 'Title')"
+              aria-describedby="title-error"
+            />
+            <span id="title-error" class="field__error">{{ errorFor(title, 'Title') }}</span>
+          </div>
+
+          <div class="field">
+            <label for="field-department">Department *</label>
+            <select id="field-department" class="select" formControlName="department">
+              @for (d of departments(); track d) {
+                <option [ngValue]="d">{{ label(d) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="field-category">Category *</label>
+            <select id="field-category" class="select" formControlName="category">
+              @for (c of categories; track c) {
+                <option [ngValue]="c">{{ label(c) }}</option>
+              }
+            </select>
+          </div>
+
+          @let invoice = form.controls.details.controls.invoiceCode;
+          <div class="field">
+            <label for="field-invoiceCode">Invoice code *</label>
+            <input
+              id="field-invoiceCode"
+              class="input mono"
+              formControlName="invoiceCode"
+              placeholder="INV-0000"
+              maxlength="8"
+              autocomplete="off"
+              spellcheck="false"
+              [attr.aria-invalid]="!!errorFor(invoice, 'Invoice code')"
+              aria-describedby="invoice-hint invoice-error"
+            />
+            <span id="invoice-hint" class="field__hint" aria-live="polite">
+              @if (invoice.pending) {
+                Checking availability…
+              } @else if (invoice.valid) {
+                ✓ Available
+              } @else {
+                Format: INV- followed by 4 digits.
+              }
+            </span>
+            <span id="invoice-error" class="field__error">{{ errorFor(invoice, 'Invoice code') }}</span>
+          </div>
+
+          @let receipt = form.controls.details.controls.receiptUrl;
+          <div class="field">
+            <label for="field-receiptUrl">Receipt URL (optional)</label>
+            <input
+              id="field-receiptUrl"
+              class="input"
+              type="url"
+              formControlName="receiptUrl"
+              inputmode="url"
+              placeholder="https://vendor.example.com/receipt.pdf"
+              autocomplete="off"
+              spellcheck="false"
+              [attr.aria-invalid]="!!errorFor(receipt, 'Receipt URL')"
+              aria-describedby="receipt-hint receipt-error"
+            />
+            <span id="receipt-hint" class="field__hint">Public https:// links only.</span>
+            <span id="receipt-error" class="field__error">{{ errorFor(receipt, 'Receipt URL') }}</span>
+          </div>
+        </fieldset>
+      }
+
+      @case (1) {
+        <fieldset class="grid" formGroupName="amounts">
+          <legend class="visually-hidden">Amounts</legend>
+
+          @let net = form.controls.amounts.controls.netAmount;
+          <div class="field">
+            <label for="field-netAmount">Net amount (EUR) *</label>
+            <input
+              id="field-netAmount"
+              class="input"
+              type="number"
+              inputmode="decimal"
+              min="0.01"
+              max="1000000"
+              step="0.01"
+              formControlName="netAmount"
+              [attr.aria-invalid]="!!errorFor(net, 'Net amount')"
+              aria-describedby="net-error"
+            />
+            <span id="net-error" class="field__error">{{ errorFor(net, 'Net amount') }}</span>
+          </div>
+
+          <div class="field">
+            <label for="field-vatRate">VAT rate *</label>
+            <select id="field-vatRate" class="select" formControlName="vatRate" aria-describedby="vat-summary">
+              @for (rate of vatRates; track rate) {
+                <option [ngValue]="rate">{{ rate }}%</option>
+              }
+            </select>
+          </div>
+
+          <output id="vat-summary" class="totals span-2" for="field-netAmount field-vatRate" aria-live="polite">
+            <span
+              >VAT: <strong>{{ eur(vatAmount()) }}</strong></span
+            >
+            <span
+              >Total: <strong>{{ eur(totalAmount()) }}</strong></span
+            >
+          </output>
+
+          @let date = form.controls.amounts.controls.date;
+          <div class="field">
+            <label for="field-date">Invoice date *</label>
+            <input
+              id="field-date"
+              class="input"
+              type="date"
+              formControlName="date"
+              [attr.max]="maxDate"
+              [attr.aria-invalid]="!!errorFor(date, 'Date')"
+              aria-describedby="date-error"
+            />
+            <span id="date-error" class="field__error">{{ errorFor(date, 'Date') }}</span>
+          </div>
+
+          @let justification = form.controls.amounts.controls.justification;
+          <div class="field span-2">
+            <label for="field-justification">Business justification *</label>
+            <textarea
+              id="field-justification"
+              class="textarea"
+              formControlName="justification"
+              maxlength="500"
+              [attr.aria-invalid]="!!errorFor(justification, 'Justification')"
+              aria-describedby="just-hint just-error"
+            ></textarea>
+            <span id="just-hint" class="field__hint">{{ justification.value.length }}/500 characters, minimum 10.</span>
+            <span id="just-error" class="field__error">{{ errorFor(justification, 'Justification') }}</span>
+          </div>
+        </fieldset>
+      }
+
+      @case (2) {
+        @let v = form.getRawValue();
+        <dl class="review">
+          <div>
+            <dt>Title</dt>
+            <dd>{{ v.details.title }}</dd>
+          </div>
+          <div>
+            <dt>Department</dt>
+            <dd>{{ label(v.details.department) }}</dd>
+          </div>
+          <div>
+            <dt>Category</dt>
+            <dd>{{ label(v.details.category) }}</dd>
+          </div>
+          <div>
+            <dt>Invoice code</dt>
+            <dd class="mono">{{ v.details.invoiceCode }}</dd>
+          </div>
+          <div>
+            <dt>Receipt</dt>
+            <dd>{{ v.details.receiptUrl || 'Not provided' }}</dd>
+          </div>
+          <div>
+            <dt>Date</dt>
+            <dd>{{ v.amounts.date }}</dd>
+          </div>
+          <div>
+            <dt>Net amount</dt>
+            <dd>{{ eur(v.amounts.netAmount) }}</dd>
+          </div>
+          <div>
+            <dt>VAT ({{ v.amounts.vatRate }}%)</dt>
+            <dd>{{ eur(vatAmount()) }}</dd>
+          </div>
+          <div class="review__total">
+            <dt>Total</dt>
+            <dd>{{ eur(totalAmount()) }}</dd>
+          </div>
+          <div class="span-2">
+            <dt>Justification</dt>
+            <dd>{{ v.amounts.justification }}</dd>
+          </div>
+        </dl>
+        <p class="muted">
+          The expense will be created with status <strong>Pending</strong>. Status and approver are assigned by the
+          server.
+        </p>
+      }
+    }
+
+    <div class="wizard__actions">
+      @if (step() > 0) {
+        <button type="button" class="btn" (click)="back()">‹ Back</button>
+      }
+      <span class="spacer"></span>
+      @if (step() < steps.length - 1) {
+        <button type="button" class="btn btn--primary" (click)="next()">Continue ›</button>
+      } @else {
+        <button type="submit" class="btn btn--primary" [disabled]="facade.submitting()">
+          {{ facade.submitting() ? 'Submitting…' : 'Submit for approval' }}
+        </button>
+      }
+    </div>
+  </form>
+</section>
+
+<app-modal [open]="discardOpen()" heading="Discard unsaved changes?" (dismissed)="resolveDiscard(false)">
+  <p>You have unsaved changes in this expense. If you leave now they will be lost.</p>
+  <ng-container modalActions>
+    <button type="button" class="btn" data-autofocus (click)="resolveDiscard(false)">Keep editing</button>
+    <button type="button" class="btn btn--danger" (click)="resolveDiscard(true)">Discard changes</button>
+  </ng-container>
+</app-modal>

@@ -1,0 +1,243 @@
+<section class="page" aria-labelledby="expenses-title">
+  <header class="page-header">
+    <div>
+      <h1 id="expenses-title">Expenses &amp; invoice approval</h1>
+      <p>Search, filter and decide on invoices within your authorised scope.</p>
+    </div>
+    <div class="cluster">
+      <button
+        type="button"
+        class="btn"
+        [disabled]="facade.exporting() || facade.total() === 0"
+        (click)="facade.exportCsv()"
+      >
+        <span aria-hidden="true">⤓</span> {{ facade.exporting() ? 'Exporting…' : 'Export CSV' }}
+      </button>
+      <a *appHasRole="'ADMIN'" class="btn btn--primary" routerLink="/expenses/new">
+        <span aria-hidden="true">＋</span> New expense
+      </a>
+    </div>
+  </header>
+
+  <form class="card filters" role="search" aria-label="Filter expenses" (submit)="$event.preventDefault()">
+    <div class="field filters__search">
+      <label for="expense-search">Search</label>
+      <input
+        id="expense-search"
+        class="input"
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Title, invoice code or justification"
+        [attr.maxlength]="maxSearchLength"
+        [formControl]="facade.searchControl"
+        [attr.aria-invalid]="facade.searchControl.invalid"
+        aria-describedby="expense-search-hint"
+      />
+      <span id="expense-search-hint" class="field__hint"
+        >Results update as you type (max {{ maxSearchLength }} characters).</span
+      >
+    </div>
+
+    <div class="field">
+      <label for="status-filter">Status</label>
+      <select id="status-filter" class="select" (change)="onStatusFilter($event)">
+        <option value="ALL">All statuses</option>
+        @for (status of statuses; track status) {
+          <option [value]="status" [selected]="status === facade.query().status">{{ label(status) }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="category-filter">Category</label>
+      <select id="category-filter" class="select" (change)="onCategoryFilter($event)">
+        <option value="ALL">All categories</option>
+        @for (category of categories; track category) {
+          <option [value]="category" [selected]="category === facade.query().category">{{ label(category) }}</option>
+        }
+      </select>
+    </div>
+  </form>
+
+  <p class="results-summary" aria-live="polite" aria-atomic="true">
+    {{ facade.loading() ? 'Loading expenses…' : facade.rangeLabel() }}
+  </p>
+
+  @if (facade.error(); as error) {
+    <div class="card alert" role="alert">
+      <p><strong>Expenses could not be loaded.</strong> {{ error }}</p>
+      <button type="button" class="btn" (click)="facade.refresh()">Try again</button>
+    </div>
+  }
+
+  @if (facade.page() === null && facade.loading()) {
+    <div class="card"><app-skeleton-loader [rows]="8" label="Loading expenses…" /></div>
+  } @else {
+    <div class="table-wrap" [attr.aria-busy]="facade.loading()">
+      <table class="data-table">
+        <caption class="visually-hidden">
+          Expenses. Column headers with buttons are sortable.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Invoice</th>
+            @for (col of columns; track col.field) {
+              <th scope="col" [attr.aria-sort]="ariaSort(col.field)" [class.num]="col.numeric">
+                <button type="button" class="sort-btn" (click)="facade.toggleSort(col.field)">
+                  {{ col.label }}
+                  <span class="sort-btn__icon" aria-hidden="true">
+                    @switch (ariaSort(col.field)) {
+                      @case ('ascending') {
+                        ▲
+                      }
+                      @case ('descending') {
+                        ▼
+                      }
+                      @default {
+                        ↕
+                      }
+                    }
+                  </span>
+                </button>
+              </th>
+            }
+            <th scope="col">Category</th>
+            @if (roles.isAdmin()) {
+              <th scope="col">Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (expense of facade.items(); track expense.id) {
+            <tr>
+              <td class="mono">{{ expense.invoiceCode }}</td>
+              <td>
+                <time [attr.datetime]="expense.date">{{ expense.date | date: 'mediumDate' }}</time>
+              </td>
+              <td>
+                <span class="expense-title">{{ expense.title }}</span>
+                <span class="expense-just">{{ expense.justification }}</span>
+              </td>
+              <td>{{ label(expense.department) }}</td>
+              <td class="num">{{ eur(expense.totalAmount) }}</td>
+              <td>
+                <span class="badge badge--{{ expense.status }}">
+                  <span aria-hidden="true">
+                    @switch (expense.status) {
+                      @case ('APPROVED') {
+                        ✓
+                      }
+                      @case ('REJECTED') {
+                        ✕
+                      }
+                      @default {
+                        ⏳
+                      }
+                    }
+                  </span>
+                  {{ label(expense.status) }}
+                </span>
+              </td>
+              <td>{{ label(expense.category) }}</td>
+              @if (roles.isAdmin()) {
+                <td>
+                  <div class="row-actions" *appHasRole="'ADMIN'">
+                    @if (canDecide(expense)) {
+                      <button
+                        type="button"
+                        class="btn btn--sm"
+                        [disabled]="facade.isBusy(expense.id)"
+                        (click)="confirm('APPROVED', expense)"
+                      >
+                        Approve<span class="visually-hidden"> {{ expense.title }}</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn--sm"
+                        [disabled]="facade.isBusy(expense.id)"
+                        (click)="confirm('REJECTED', expense)"
+                      >
+                        Reject<span class="visually-hidden"> {{ expense.title }}</span>
+                      </button>
+                    }
+                    @if (expense.status !== 'APPROVED') {
+                      <button
+                        type="button"
+                        class="btn btn--sm btn--ghost danger-text"
+                        [disabled]="facade.isBusy(expense.id)"
+                        (click)="confirm('DELETE', expense)"
+                      >
+                        Delete<span class="visually-hidden"> {{ expense.title }}</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              }
+            </tr>
+          } @empty {
+            <tr>
+              <td [attr.colspan]="roles.isAdmin() ? 8 : 7" class="empty">No expenses match the current filters.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <nav class="pagination" aria-label="Pagination">
+      <div class="field pagination__size">
+        <label for="page-size">Rows per page</label>
+        <select id="page-size" class="select" (change)="onPageSize($event)">
+          @for (size of pageSizes; track size) {
+            <option [value]="size" [selected]="size === facade.query().pageSize">{{ size }}</option>
+          }
+        </select>
+      </div>
+      <div class="cluster">
+        <button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="facade.query().page <= 1"
+          (click)="facade.goToPage(facade.query().page - 1)"
+        >
+          <span aria-hidden="true">‹</span> Previous
+        </button>
+        <span class="pagination__status">Page {{ facade.query().page }} of {{ facade.totalPages() }}</span>
+        <button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="facade.query().page >= facade.totalPages()"
+          (click)="facade.goToPage(facade.query().page + 1)"
+        >
+          Next <span aria-hidden="true">›</span>
+        </button>
+      </div>
+    </nav>
+  }
+</section>
+
+<app-modal [open]="pendingAction() !== null" [heading]="modalHeading()" (dismissed)="pendingAction.set(null)">
+  @if (pendingAction(); as action) {
+    <p>
+      <strong>{{ action.expense.title }}</strong> ({{ action.expense.invoiceCode }},
+      {{ eur(action.expense.totalAmount) }})
+    </p>
+    @if (action.kind === 'DELETE') {
+      <p>The expense will be permanently removed. This cannot be undone.</p>
+    } @else {
+      <p>Decisions are final: an expense cannot change status once it is approved or rejected.</p>
+    }
+  }
+  <ng-container modalActions>
+    <button type="button" class="btn" data-autofocus (click)="pendingAction.set(null)">Cancel</button>
+    <button
+      type="button"
+      class="btn"
+      [class.btn--danger]="pendingAction()?.kind !== 'APPROVED'"
+      [class.btn--primary]="pendingAction()?.kind === 'APPROVED'"
+      (click)="executePending()"
+    >
+      {{ pendingAction()?.kind === 'DELETE' ? 'Delete' : pendingAction()?.kind === 'APPROVED' ? 'Approve' : 'Reject' }}
+    </button>
+  </ng-container>
+</app-modal>

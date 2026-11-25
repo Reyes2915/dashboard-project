@@ -1,0 +1,97 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['frontend/**', '.github/workflows/frontend-ci.yml']
+  pull_request:
+    paths: ['frontend/**', '.github/workflows/frontend-ci.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  quality:
+    name: Lint · Test · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install (lockfile only)
+        run: npm ci
+
+      - name: Supply-chain audit (runtime dependencies, blocking)
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Supply-chain audit (full tree, report)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Forbid raw HTML sinks and sanitizer bypasses
+        run: npm run security:sinks
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit & security tests
+        run: npm test -- --watch=false
+
+      - name: Production build
+        run: npm run build
+
+      - name: Assert no source maps shipped
+        run: test -z "$(find dist -name '*.map')"
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: quality
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: false
+          load: true
+          tags: finops-dashboard:ci
+      - name: Smoke test security headers
+        working-directory: .
+        run: |
+          docker run -d --rm -p 8080:8080 --name finops finops-dashboard:ci
+          sleep 3
+          headers="$(curl -sI http://127.0.0.1:8080/dashboard)"
+          echo "$headers"
+          echo "$headers" | grep -qi '^content-security-policy:.*frame-ancestors .none.'
+          echo "$headers" | grep -qi '^x-frame-options: DENY'
+          echo "$headers" | grep -qi '^x-content-type-options: nosniff'
+          echo "$headers" | grep -qi '^strict-transport-security:'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8080/)" = "405"
+          docker stop finops

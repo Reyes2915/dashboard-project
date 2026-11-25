@@ -1,0 +1,84 @@
+<a class="skip-link" href="#main-content" (click)="skipToContent($event)">Skip to main content</a>
+
+<header class="shell-header">
+  <div class="shell-header__inner">
+    <a class="brand" routerLink="/dashboard" aria-label="FinOps Enterprise, go to dashboard">
+      <span class="brand__mark" aria-hidden="true">◆</span>
+      <span class="brand__name">FinOps Enterprise</span>
+    </a>
+
+    <nav class="shell-nav" aria-label="Primary">
+      <ul>
+        <li><a routerLink="/dashboard" routerLinkActive="is-active" ariaCurrentWhenActive="page">Dashboard</a></li>
+        <li>
+          <a
+            routerLink="/expenses"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            ariaCurrentWhenActive="page"
+            >Expenses</a
+          >
+        </li>
+        <li>
+          <a routerLink="/security-lab" routerLinkActive="is-active" ariaCurrentWhenActive="page">Security lab</a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="shell-tools">
+      <div class="role-switch">
+        <label for="role-select">Role</label>
+        <select
+          id="role-select"
+          class="select"
+          [disabled]="roles.switching()"
+          aria-describedby="role-identity"
+          (change)="onRoleChange($event)"
+        >
+          @for (role of availableRoles; track role) {
+            <option [value]="role" [selected]="role === roles.role()">{{ role }}</option>
+          }
+        </select>
+        <span id="role-identity" class="role-switch__identity" aria-live="polite">{{ roles.displayName() }}</span>
+      </div>
+
+      <button
+        type="button"
+        class="btn btn--sm"
+        [attr.aria-pressed]="theme() === 'high-contrast'"
+        (click)="toggleTheme()"
+      >
+        High contrast
+      </button>
+
+      <button
+        #auditToggle
+        type="button"
+        class="btn btn--sm"
+        aria-controls="security-audit-drawer"
+        [attr.aria-expanded]="auditOpen()"
+        (click)="toggleAudit()"
+      >
+        <span aria-hidden="true">🛡</span> Audit log
+        @if (audit.unseenCount() > 0) {
+          <span class="count-badge">
+            {{ audit.unseenCount() }}<span class="visually-hidden"> new security events</span>
+          </span>
+        }
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" #main class="shell-main" tabindex="-1">
+  <router-outlet />
+</main>
+
+<footer class="shell-footer">
+  <p>
+    Demo environment · simulated API at <code>/api/v1</code> · data persisted locally with SHA-256 integrity checks.
+  </p>
+</footer>
+
+<app-security-audit-drawer [open]="auditOpen()" (closed)="closeAudit()" />
+<app-toast-container />
